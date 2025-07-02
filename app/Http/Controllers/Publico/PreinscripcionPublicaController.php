@@ -15,6 +15,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PreinscripcionPublicaController extends Controller
 {
@@ -43,7 +44,7 @@ class PreinscripcionPublicaController extends Controller
         $cursosDisponibles = Curso::activo()
             ->with(['tutor', 'precios.tipoParticipante'])
             ->where('fecha_inicio', '>', Carbon::now()->addDays(3)) // Al menos 3 días de anticipación
-            ->where('cupos_ocupados', '<', 'cupos_totales')
+            ->whereRaw('"cupos_ocupados" < "cupos_totales"')
             ->orderBy('fecha_inicio')
             ->get()
             ->map(function ($curso) {
@@ -193,12 +194,21 @@ class PreinscripcionPublicaController extends Controller
             return redirect('/preinscripcion/confirmacion')
                 ->with('success', 'Preinscripción realizada exitosamente.')
                 ->with('preinscripcion_data', [
+                    'id' => $this->preinscripcionCreada->id,
                     'participante' => $this->participanteCreado->nombre_completo,
+                    'carnet' => $this->participanteCreado->carnet,
+                    'email' => $this->participanteCreado->email,
+                    'telefono' => $this->participanteCreado->telefono,
+                    'universidad' => $this->participanteCreado->universidad,
                     'curso' => $curso->nombre,
                     'tutor' => $curso->tutor->nombre_completo,
                     'fecha_inicio' => $curso->fecha_inicio->format('d/m/Y'),
+                    'fecha_fin' => $curso->fecha_fin->format('d/m/Y'),
+                    'duracion_horas' => $curso->duracion_horas,
+                    'aula' => $curso->aula,
                     'precio' => $precioAplicable->precio_formateado ?? 'No definido',
                     'tipo_participante' => $precioAplicable->tipoParticipante->descripcion ?? '',
+                    'fecha_preinscripcion' => $this->preinscripcionCreada->fecha_preinscripcion->format('d/m/Y H:i'),
                 ]);
         } catch (\Exception $e) {
             return back()->withErrors([
@@ -306,7 +316,7 @@ class PreinscripcionPublicaController extends Controller
         $cursos = Curso::activo()
             ->with(['tutor', 'precios.tipoParticipante'])
             ->where('fecha_inicio', '>', Carbon::now()->addDays(3))
-            ->where('cupos_ocupados', '<', 'cupos_totales')
+            ->whereRaw('"cupos_ocupados" < "cupos_totales"')
             ->orderBy('fecha_inicio')
             ->get()
             ->map(function ($curso) {
@@ -473,4 +483,59 @@ class PreinscripcionPublicaController extends Controller
      */
     private $preinscripcionCreada;
     private $participanteCreado;
+
+    /**
+     * Generar PDF de la preinscripción
+     */
+    public function generarPDF($preinscripcionId)
+    {
+        try {
+            // Buscar la preinscripción con relaciones
+            $preinscripcion = Preinscripcion::with([
+                'participante.tipoParticipante',
+                'curso.tutor',
+                'curso.precios.tipoParticipante'
+            ])->findOrFail($preinscripcionId);
+
+            // Obtener el precio aplicable
+            $precioAplicable = $preinscripcion->curso->precios()
+                ->where('tipo_participante_id', $preinscripcion->participante->tipo_participante_id)
+                ->first();
+
+            // Preparar datos para la vista
+            $datos = [
+                'preinscripcion' => $preinscripcion,
+                'participante' => $preinscripcion->participante,
+                'curso' => $preinscripcion->curso,
+                'tutor' => $preinscripcion->curso->tutor,
+                'precio' => $precioAplicable,
+                'fecha_generacion' => now()->format('d/m/Y H:i'),
+            ];
+
+            // Generar HTML para el PDF
+            $html = view('pdf.preinscripcion', $datos)->render();
+
+            // Generar PDF usando Laravel DomPDF
+            $pdf = Pdf::loadHtml($html)
+                ->setPaper('A4', 'portrait')
+                ->setOptions([
+                    'defaultFont' => 'Arial',
+                    'isHtml5ParserEnabled' => true,
+                    'isPhpEnabled' => true,
+                ]);
+
+            // Nombre del archivo
+            $nombreArchivo = 'preinscripcion_' . $preinscripcion->id . '_' . 
+                            str_replace(' ', '_', $preinscripcion->participante->nombre) . '_' .
+                            str_replace(' ', '_', $preinscripcion->participante->apellido) . '.pdf';
+
+            // Devolver el PDF para descarga
+            return $pdf->download($nombreArchivo);
+
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors([
+                'pdf' => 'Error al generar el PDF: ' . $e->getMessage()
+            ]);
+        }
+    }
 }

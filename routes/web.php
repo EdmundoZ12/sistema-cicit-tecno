@@ -7,18 +7,70 @@ use App\Http\Controllers\Compartido\BusquedaController;
 use App\Http\Controllers\Compartido\ConfiguracionController;
 use App\Http\Controllers\Compartido\VisitaController;
 use App\Http\Controllers\Compartido\MenuController;
+use Carbon\Carbon;
 
 // =====================================================
 // RUTAS PÚBLICAS (Sin autenticación)
 // =====================================================
 
 Route::get('/', function () {
-    return Inertia::render('Welcome');
+    // Obtener cursos disponibles para mostrar en la página principal
+    $cursosDisponibles = \App\Models\Curso::activo()
+        ->with(['tutor', 'gestion'])
+        ->where('fecha_inicio', '>', \Carbon\Carbon::now()->addDays(3))
+        ->whereRaw('"cupos_ocupados" < "cupos_totales"')
+        ->orderBy('fecha_inicio')
+        ->take(6) // Mostrar solo los primeros 6 cursos
+        ->get()
+        ->map(function ($curso) {
+            return [
+                'id' => $curso->id,
+                'nombre' => $curso->nombre,
+                'descripcion' => $curso->descripcion,
+                'duracion_horas' => $curso->duracion_horas,
+                'nivel' => $curso->nivel,
+                'logo_url' => $curso->logo_url,
+                'tutor' => $curso->tutor->nombre_completo,
+                'fecha_inicio' => $curso->fecha_inicio->format('d/m/Y'),
+                'fecha_fin' => $curso->fecha_fin->format('d/m/Y'),
+                'cupos_disponibles' => $curso->cupos_totales - $curso->cupos_ocupados,
+                'aula' => $curso->aula,
+            ];
+        });
+
+    return Inertia::render('Welcome', [
+        'cursosDisponibles' => $cursosDisponibles,
+    ]);
 })->name('home');
 
 // Rutas públicas adicionales
 Route::get('/cursos', function () {
-    return Inertia::render('Publico/Cursos');
+    // Obtener todos los cursos disponibles para preinscripción
+    $cursosDisponibles = \App\Models\Curso::activo()
+        ->with(['tutor', 'gestion'])
+        ->where('fecha_inicio', '>', Carbon::now()->addDays(3))
+        ->whereRaw('"cupos_ocupados" < "cupos_totales"')
+        ->orderBy('fecha_inicio')
+        ->get()
+        ->map(function ($curso) {
+            return [
+                'id' => $curso->id,
+                'nombre' => $curso->nombre,
+                'descripcion' => $curso->descripcion,
+                'duracion_horas' => $curso->duracion_horas,
+                'nivel' => $curso->nivel,
+                'logo_url' => $curso->logo_url,
+                'tutor' => $curso->tutor->nombre_completo,
+                'fecha_inicio' => $curso->fecha_inicio->format('d/m/Y'),
+                'fecha_fin' => $curso->fecha_fin->format('d/m/Y'),
+                'cupos_disponibles' => $curso->cupos_totales - $curso->cupos_ocupados,
+                'aula' => $curso->aula,
+            ];
+        });
+
+    return Inertia::render('Publico/Cursos', [
+        'cursosDisponibles' => $cursosDisponibles,
+    ]);
 })->name('cursos.publicos');
 
 Route::get('/sobre-nosotros', function () {
@@ -29,10 +81,82 @@ Route::get('/contacto', function () {
     return Inertia::render('Publico/Contacto');
 })->name('contacto');
 
+// Rutas de preinscripción pública
+Route::get('/preinscripcion/confirmacion', [\App\Http\Controllers\Publico\PreinscripcionPublicaController::class, 'confirmacion'])
+    ->name('preinscripcion.confirmacion');
+
+Route::get('/preinscripcion/{curso?}', [\App\Http\Controllers\Publico\PreinscripcionPublicaController::class, 'create'])
+    ->name('preinscripcion.create');
+
+Route::post('/preinscripcion', [\App\Http\Controllers\Publico\PreinscripcionPublicaController::class, 'store'])
+    ->name('preinscripcion.store');
+
+Route::get('/preinscripcion/{id}/pdf', [\App\Http\Controllers\Publico\PreinscripcionPublicaController::class, 'generarPDF'])
+    ->name('preinscripcion.pdf');
+
 // Página "Acerca de"
 Route::get('/acerca', function () {
     return Inertia::render('Publico/SobreNosotros');
 })->name('acerca');
+
+// ========================================
+// RUTAS ADMINISTRATIVAS
+// ========================================
+
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    
+    // Dashboard principal
+    Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])
+        ->name('dashboard');
+    
+    // Gestión de preinscripciones
+    Route::get('/preinscripciones', [\App\Http\Controllers\Admin\PreinscripcionController::class, 'index'])
+        ->name('preinscripciones.index');
+    
+    Route::get('/preinscripciones/{id}', [\App\Http\Controllers\Admin\PreinscripcionController::class, 'show'])
+        ->name('preinscripciones.show');
+    
+    Route::patch('/preinscripciones/{id}/aprobar', [\App\Http\Controllers\Admin\PreinscripcionController::class, 'aprobar'])
+        ->name('preinscripciones.aprobar');
+    
+    Route::patch('/preinscripciones/{id}/rechazar', [\App\Http\Controllers\Admin\PreinscripcionController::class, 'rechazarSimple'])
+        ->name('preinscripciones.rechazar');
+    
+    Route::get('/preinscripciones/export', [\App\Http\Controllers\Admin\PreinscripcionController::class, 'export'])
+        ->name('preinscripciones.export');
+    
+    // Gestión de inscripciones
+    Route::get('/inscripciones', [\App\Http\Controllers\Admin\InscripcionController::class, 'index'])
+        ->name('inscripciones.index');
+    
+    // Gestión de pagos
+    Route::get('/pagos', [\App\Http\Controllers\Admin\PagoController::class, 'index'])
+        ->name('pagos.index');
+    
+    Route::get('/pagos/registrar', [\App\Http\Controllers\Admin\PagoController::class, 'create'])
+        ->name('pagos.create');
+    
+    Route::post('/pagos/buscar-preinscripcion', [\App\Http\Controllers\Admin\PagoController::class, 'buscarPreinscripcion'])
+        ->name('pagos.buscar-preinscripcion');
+    
+    Route::post('/pagos', [\App\Http\Controllers\Admin\PagoController::class, 'store'])
+        ->name('pagos.store');
+        
+    Route::get('/pagos/{pago}', [\App\Http\Controllers\Admin\PagoController::class, 'show'])
+        ->name('pagos.show');
+    
+    // Gestión de cursos (Admin)
+    Route::get('/cursos', [\App\Http\Controllers\Admin\CursoController::class, 'index'])
+        ->name('cursos.index');
+    
+    // Gestión de participantes
+    Route::get('/participantes', [\App\Http\Controllers\Admin\ParticipanteController::class, 'index'])
+        ->name('participantes.index');
+    
+    // Reportes
+    Route::get('/reportes', [\App\Http\Controllers\Admin\ReporteController::class, 'index'])
+        ->name('reportes.index');
+});
 
 // Verificación de certificados (público)
 Route::get('/certificados/verificar', function () {

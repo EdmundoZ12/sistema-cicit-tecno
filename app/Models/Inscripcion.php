@@ -208,4 +208,40 @@ class Inscripcion extends Model
     {
         return $this->aprobo() && $this->porcentajeAsistencia() >= 75;
     }
+
+    /**
+     * Eventos del modelo para manejar cupos del curso
+     */
+    protected static function booted()
+    {
+        // Cuando se crea una inscripción activa, incrementar cupos ocupados
+        static::created(function ($inscripcion) {
+            if ($inscripcion->estaInscrito()) {
+                $inscripcion->curso->increment('cupos_ocupados');
+            }
+        });
+
+        // Cuando se actualiza una inscripción
+        static::updated(function ($inscripcion) {
+            $original = $inscripcion->getOriginal();
+            $estadoAnterior = $original['estado'];
+            $estadoActual = $inscripcion->estado;
+
+            // Si cambió de no inscrito a inscrito
+            if ($estadoAnterior !== self::ESTADO_INSCRITO && $estadoActual === self::ESTADO_INSCRITO) {
+                $inscripcion->curso->increment('cupos_ocupados');
+            }
+            // Si cambió de inscrito a no inscrito (retirado, etc.)
+            elseif ($estadoAnterior === self::ESTADO_INSCRITO && $estadoActual !== self::ESTADO_INSCRITO) {
+                $inscripcion->curso->decrement('cupos_ocupados');
+            }
+        });
+
+        // Cuando se elimina una inscripción activa, decrementar cupos ocupados
+        static::deleted(function ($inscripcion) {
+            if ($inscripcion->estaInscrito()) {
+                $inscripcion->curso->decrement('cupos_ocupados');
+            }
+        });
+    }
 }

@@ -14,6 +14,7 @@ use App\Models\Certificado;
 use App\Models\Estadistica;
 use App\Models\VisitaPagina;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -25,7 +26,7 @@ class DashboardController extends Controller
     /**
      * Dashboard principal que redirige según el rol
      */
-    public function index(): Response
+    public function index()
     {
         $user = Auth::user();
 
@@ -36,7 +37,8 @@ class DashboardController extends Controller
             case 'RESPONSABLE':
                 return $this->dashboardResponsable();
             case 'ADMINISTRATIVO':
-                return $this->dashboardAdministrativo();
+                // Redirigir directamente al dashboard administrativo
+                return redirect('/admin');
             case 'TUTOR':
                 return $this->dashboardTutor();
             default:
@@ -84,42 +86,6 @@ class DashboardController extends Controller
             'estadisticas' => $stats,
             'graficos' => $this->getGraficosResponsable(),
             'userThemeConfig' => session('user_theme_config', null),
-        ]);
-    }
-
-    /**
-     * Dashboard para ADMINISTRATIVO
-     */
-    private function dashboardAdministrativo(): Response
-    {
-        $stats = [
-            // Preinscripciones por gestionar
-            'preinscripciones_pendientes' => Preinscripcion::where('estado', 'PENDIENTE')->count(),
-            'preinscripciones_aprobadas_hoy' => Preinscripcion::where('estado', 'APROBADA')
-                ->whereDate('updated_at', Carbon::today())->count(),
-
-            // Inscripciones del día
-            'inscripciones_hoy' => Inscripcion::whereDate('created_at', Carbon::today())->count(),
-            'inscripciones_mes' => Inscripcion::whereMonth('created_at', Carbon::now()->month)->count(),
-
-            // Pagos pendientes y confirmados
-            'pagos_pendientes' => Preinscripcion::where('estado', 'APROBADA')
-                ->whereDoesntHave('pago')->count(),
-            'pagos_confirmados_hoy' => Pago::whereDate('created_at', Carbon::today())->count(),
-            'ingresos_hoy' => Pago::whereDate('created_at', Carbon::today())->sum('monto'),
-            'ingresos_mes' => Pago::whereMonth('created_at', Carbon::now()->month)->sum('monto'),
-
-            // Cupos y disponibilidad
-            'cursos_con_cupos_disponibles' => Curso::where('activo', true)
-                ->whereColumn('cupos_ocupados', '<', 'cupos_totales')->count(),
-            'cursos_llenos' => Curso::where('activo', true)
-                ->whereColumn('cupos_ocupados', '=', 'cupos_totales')->count(),
-        ];
-
-        return Inertia::render('Dashboard/AdministrativoDashboard', [
-            'estadisticas' => $stats,
-            'preinscripciones_recientes' => $this->getPreinscripcionesRecientes(),
-            'pagos_recientes' => $this->getPagosRecientes(),
         ]);
     }
 

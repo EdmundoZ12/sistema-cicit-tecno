@@ -2,6 +2,26 @@
 import CICITLayout from '@/layouts/CICITLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 
+// Definir el tipo para los cursos
+interface Curso {
+    id: number;
+    nombre: string;
+    descripcion: string;
+    duracion_horas: number;
+    nivel: string;
+    logo_url?: string;
+    tutor: string;
+    fecha_inicio: string;
+    fecha_fin: string;
+    cupos_disponibles: number;
+    aula: string;
+}
+
+// Props
+defineProps<{
+    cursosDisponibles: Curso[];
+}>();
+
 // Breadcrumbs para la página de bienvenida
 const breadcrumbs = [
     {
@@ -98,6 +118,104 @@ const breadcrumbs = [
                 <p class="text-gray-600 dark:text-gray-300">
                     Mantente al día con las últimas tendencias y tecnologías del mercado.
                 </p>
+            </div>
+        </div>
+
+        <!-- Cursos Disponibles Section -->
+        <div v-if="cursosDisponibles && cursosDisponibles.length > 0" class="mt-16">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
+                    Cursos Disponibles
+                </h2>
+                <p class="mt-4 text-xl text-gray-600 dark:text-gray-300">
+                    Descubre nuestros próximos cursos de certificación y capacítate en las últimas tecnologías
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div
+                    v-for="curso in cursosDisponibles"
+                    :key="curso.id"
+                    class="relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-shadow duration-300"
+                >
+                    <!-- Imagen del curso -->
+                    <div class="h-48 bg-gradient-to-br from-blue-400 to-purple-500 relative">
+                        <img
+                            v-if="curso.logo_url"
+                            :src="curso.logo_url"
+                            :alt="curso.nombre"
+                            class="w-full h-full object-cover"
+                        />
+                        <div class="absolute inset-0 bg-black bg-opacity-20"></div>
+                        <div class="absolute top-4 right-4 bg-white dark:bg-gray-800 px-3 py-1 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {{ curso.nivel }}
+                        </div>
+                    </div>
+
+                    <!-- Contenido del curso -->
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                            {{ curso.nombre }}
+                        </h3>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3">
+                            {{ curso.descripcion }}
+                        </p>
+
+                        <!-- Información del curso -->
+                        <div class="space-y-2 mb-4">
+                            <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                Instructor: {{ curso.tutor }}
+                            </div>
+                            <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                {{ curso.duracion_horas }} horas
+                            </div>
+                            <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                Inicio: {{ curso.fecha_inicio }}
+                            </div>
+                            <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                                {{ curso.cupos_disponibles }} cupos disponibles
+                            </div>
+                        </div>
+
+                        <!-- Botón de preinscripción -->
+                        <div class="flex justify-between items-center">
+                            <Link
+                                :href="`/preinscripcion/${curso.id}`"
+                                class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-medium rounded-md transition-colors"
+                            >
+                                Preinscribirse
+                            </Link>
+                            <span class="text-xs text-gray-400 dark:text-gray-500">
+                                Aula: {{ curso.aula }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón para ver todos los cursos -->
+            <div class="text-center mt-12">
+                <Link
+                    href="/cursos"
+                    class="inline-flex items-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                    Ver Todos los Cursos
+                    <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </Link>
             </div>
         </div>
 
