@@ -13,71 +13,143 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class CursoController extends Controller
 {
     /**
-     * Constructor - Solo RESPONSABLE puede gestionar cursos
+     * Subir imagen del curso
      */
-    public function __construct()
+    public function uploadImage(Request $request)
     {
-        $this->middleware(['auth', 'role:RESPONSABLE']);
+        $request->validate([
+            'image' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'], // máximo 2MB
+        ], [
+            'image.required' => 'Debe seleccionar una imagen.',
+            'image.image' => 'El archivo debe ser una imagen.',
+            'image.mimes' => 'La imagen debe ser de tipo: jpeg, jpg, png o webp.',
+            'image.max' => 'La imagen no debe superar los 2MB.',
+        ]);
+
+        try {
+            $image = $request->file('image');
+            $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+
+            // Crear directorio si no existe
+            $directory = 'public/cursos/logos';
+            if (!Storage::exists($directory)) {
+                Storage::makeDirectory($directory);
+            }
+
+            // Guardar imagen
+            $path = $image->storeAs($directory, $filename);
+            $url = Storage::url($path);
+
+            return response()->json([
+                'success' => true,
+                'url' => $url,
+                'filename' => $filename,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al subir la imagen: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): Response
+    public function index(Request $request)
     {
-        $cursos = Curso::with(['tutor', 'gestion', 'precios.tipoParticipante'])
-            ->when($request->search, function ($query, $search) {
-                $query->where('nombre', 'ILIKE', "%{$search}%")
-                    ->orWhere('descripcion', 'ILIKE', "%{$search}%")
-                    ->orWhereHas('tutor', function ($q) use ($search) {
-                        $q->where('nombre', 'ILIKE', "%{$search}%")
-                            ->orWhere('apellido', 'ILIKE', "%{$search}%");
-                    });
-            })
-            ->when($request->tutor_id, function ($query, $tutorId) {
-                $query->where('tutor_id', $tutorId);
-            })
-            ->when($request->gestion_id, function ($query, $gestionId) {
-                $query->where('gestion_id', $gestionId);
-            })
-            ->when($request->activo !== null, function ($query) use ($request) {
-                $query->where('activo', $request->boolean('activo'));
-            })
-            ->when($request->estado, function ($query, $estado) {
-                $hoy = now()->toDateString();
-                switch ($estado) {
-                    case 'en_progreso':
-                        $query->enProgreso();
-                        break;
-                    case 'proximos':
-                        $query->where('fecha_inicio', '>', $hoy);
-                        break;
-                    case 'finalizados':
-                        $query->where('fecha_fin', '<', $hoy);
-                        break;
-                }
-            })
-            ->withCount(['inscripciones', 'preinscripciones'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15)
-            ->withQueryString();
+        try {
+            $query = Curso::with(['tutor', 'gestion', 'precios.tipoParticipante']);
 
-        return Inertia::render('Responsable/Cursos/Index', [
-            'cursos' => $cursos,
-            'filters' => $request->only(['search', 'tutor_id', 'gestion_id', 'activo', 'estado']),
-            'tutores' => Usuario::role('TUTOR')->activo()->get(['id', 'nombre', 'apellido']),
-            'gestiones' => Gestion::activo()->get(['id', 'nombre']),
-            'estadisticas' => [
+            // Aplicar filtros de búsqueda
+            if ($request->search) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('nombre', 'LIKE', "%{$search}%")
+                      ->orWhere('descripcion', 'LIKE', "%{$search}%")
+                      ->orWhereHas('tutor', function ($tutor) use ($search) {
+                          $tutor->where('nombre', 'LIKE', "%{$search}%")
+                                ->orWhere('apellido', 'LIKE', "%{$search}%");
+                      });
+                });
+            }
+
+            // Aplicar filtro de tutor
+            if ($request->tutor_id) {
+                $query->where('tutor_id', $request->tutor_id);
+            }
+
+            // Aplicar filtro de gestión
+            if ($request->gestion_id) {
+                $query->where('gestion_id', $request->gestion_id);
+            }
+
+            // Aplicar filtro de estado
+            if ($request->activo !== null) {
+                $query->where('activo', $request->boolean('activo'));
+            }
+
+            // Obtener los resultados
+            $cursosData = $query
+                ->withCount(['inscripciones', 'preinscripciones'])
+                ->orderBy('created_at', 'desc')
+                ->paginate(15)
+                ->withQueryString();
+
+            // Get support data
+            $tutores = Usuario::where('rol', 'TUTOR')->where('activo', true)->get(['id', 'nombre', 'apellido']);
+            $gestiones = Gestion::where('activo', true)->get(['id', 'nombre']);
+            $tiposParticipante = TipoParticipante::where('activo', true)->get(['id', 'codigo', 'descripcion']);
+
+            $estadisticas = [
                 'total' => Curso::count(),
-                'activos' => Curso::activo()->count(),
-                'en_progreso' => Curso::enProgreso()->count(),
+                'activos' => Curso::where('activo', true)->count(),
+                'en_progreso' => Curso::where('activo', true)
+                    ->where('fecha_inicio', '<=', now())
+                    ->where('fecha_fin', '>=', now())
+                    ->count(),
                 'con_inscripciones' => Curso::has('inscripciones')->count(),
-            ]
-        ]);
+            ];
+
+            // Para peticiones AJAX del componente, devolver JSON
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'cursosData' => $cursosData,
+                    'tutores' => $tutores,
+                    'gestiones' => $gestiones,
+                    'tiposParticipante' => $tiposParticipante,
+                    'cursosEstadisticas' => $estadisticas,
+                    'filters' => $request->only(['search', 'tutor_id', 'gestion_id', 'activo'])
+                ]);
+            }
+
+            return redirect()->route('responsable.dashboard');
+        } catch (\Exception $e) {
+            Log::error('Error en CursoController@index: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'error' => 'Error al cargar los cursos',
+                    'message' => $e->getMessage(),
+                    'cursosData' => ['data' => []],
+                    'tutores' => [],
+                    'gestiones' => [],
+                    'tiposParticipante' => [],
+                    'cursosEstadisticas' => ['total' => 0, 'activos' => 0, 'en_progreso' => 0, 'con_inscripciones' => 0]
+                ], 500);
+            }
+
+            return back()->with('error', 'Error al cargar los cursos');
+        }
     }
 
     /**
@@ -86,9 +158,9 @@ class CursoController extends Controller
     public function create(): Response
     {
         return Inertia::render('Responsable/Cursos/Create', [
-            'tutores' => Usuario::role('TUTOR')->activo()->get(['id', 'nombre', 'apellido']),
-            'gestiones' => Gestion::activo()->get(['id', 'nombre', 'fecha_inicio', 'fecha_fin']),
-            'tiposParticipante' => TipoParticipante::activo()->get(['id', 'codigo', 'descripcion']),
+            'tutores' => Usuario::where('rol', 'TUTOR')->where('activo', true)->get(['id', 'nombre', 'apellido']),
+            'gestiones' => Gestion::where('activo', true)->get(['id', 'nombre', 'fecha_inicio', 'fecha_fin']),
+            'tiposParticipante' => TipoParticipante::where('activo', true)->get(['id', 'codigo', 'descripcion']),
         ]);
     }
 
@@ -102,7 +174,7 @@ class CursoController extends Controller
             'descripcion' => ['nullable', 'string'],
             'duracion_horas' => ['required', 'integer', 'min:1'],
             'nivel' => ['nullable', 'string', 'max:50'],
-            'logo_url' => ['nullable', 'url', 'max:500'],
+            'logo_url' => ['nullable', 'string', 'max:500'],
             'tutor_id' => ['required', 'exists:USUARIO,id'],
             'gestion_id' => ['required', 'exists:GESTION,id'],
             'aula' => ['nullable', 'string', 'max:50'],
@@ -167,8 +239,9 @@ class CursoController extends Controller
             }
         });
 
-        return redirect()->route('responsable.cursos.index')
-            ->with('success', 'Curso creado exitosamente.');
+        return redirect('/dashboard')
+            ->with('success', 'Curso creado exitosamente.')
+            ->with('activeSection', 'cursos');
     }
 
     /**
@@ -212,9 +285,9 @@ class CursoController extends Controller
 
         return Inertia::render('Responsable/Cursos/Edit', [
             'curso' => $curso,
-            'tutores' => Usuario::role('TUTOR')->activo()->get(['id', 'nombre', 'apellido']),
-            'gestiones' => Gestion::activo()->get(['id', 'nombre', 'fecha_inicio', 'fecha_fin']),
-            'tiposParticipante' => TipoParticipante::activo()->get(['id', 'codigo', 'descripcion']),
+            'tutores' => Usuario::where('rol', 'TUTOR')->where('activo', true)->get(['id', 'nombre', 'apellido']),
+            'gestiones' => Gestion::where('activo', true)->get(['id', 'nombre', 'fecha_inicio', 'fecha_fin']),
+            'tiposParticipante' => TipoParticipante::where('activo', true)->get(['id', 'codigo', 'descripcion']),
         ]);
     }
 
@@ -228,7 +301,7 @@ class CursoController extends Controller
             'descripcion' => ['nullable', 'string'],
             'duracion_horas' => ['required', 'integer', 'min:1'],
             'nivel' => ['nullable', 'string', 'max:50'],
-            'logo_url' => ['nullable', 'url', 'max:500'],
+            'logo_url' => ['nullable', 'string', 'max:500'],
             'tutor_id' => ['required', 'exists:USUARIO,id'],
             'gestion_id' => ['required', 'exists:GESTION,id'],
             'aula' => ['nullable', 'string', 'max:50'],
@@ -273,8 +346,9 @@ class CursoController extends Controller
             }
         });
 
-        return redirect()->route('responsable.cursos.index')
-            ->with('success', 'Curso actualizado exitosamente.');
+        return redirect('/dashboard')
+            ->with('success', 'Curso actualizado exitosamente.')
+            ->with('activeSection', 'cursos');
     }
 
     /**
@@ -326,7 +400,7 @@ class CursoController extends Controller
      */
     public function getCursosActivos()
     {
-        $cursos = Curso::activo()
+        $cursos = Curso::where('activo', true)
             ->with('tutor')
             ->select('id', 'nombre', 'tutor_id', 'cupos_totales', 'cupos_ocupados')
             ->get()
@@ -334,8 +408,8 @@ class CursoController extends Controller
                 return [
                     'id' => $curso->id,
                     'nombre' => $curso->nombre,
-                    'tutor' => $curso->tutor->nombre_completo,
-                    'cupos_disponibles' => $curso->cupos_disponibles,
+                    'tutor' => $curso->tutor->nombre . ' ' . $curso->tutor->apellido,
+                    'cupos_disponibles' => $curso->cupos_totales - ($curso->cupos_ocupados ?? 0),
                 ];
             });
 
@@ -349,10 +423,13 @@ class CursoController extends Controller
     {
         $stats = [
             'total_cursos' => Curso::count(),
-            'cursos_activos' => Curso::activo()->count(),
-            'en_progreso' => Curso::enProgreso()->count(),
-            'promedio_cupos_ocupacion' => Curso::activo()->avg('cupos_ocupados'),
-            'cursos_por_tutor' => Usuario::role('TUTOR')
+            'cursos_activos' => Curso::where('activo', true)->count(),
+            'en_progreso' => Curso::where('activo', true)
+                ->where('fecha_inicio', '<=', now())
+                ->where('fecha_fin', '>=', now())
+                ->count(),
+            'promedio_cupos_ocupacion' => Curso::where('activo', true)->avg('cupos_ocupados'),
+            'cursos_por_tutor' => Usuario::where('rol', 'TUTOR')
                 ->withCount('cursos')
                 ->having('cursos_count', '>', 0)
                 ->get(['nombre', 'apellido', 'cursos_count']),

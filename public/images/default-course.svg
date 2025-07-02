@@ -1,0 +1,7 @@
+<!-- Placeholder SVG for default course image -->
+<svg width="400" height="200" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="200" fill="#f3f4f6"/>
+  <path d="M150 70h100v60H150V70z" fill="#d1d5db"/>
+  <path d="M170 85h60v30h-60V85z" fill="#9ca3af"/>
+  <text x="200" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#6b7280">Imagen del Curso</text>
+</svg>

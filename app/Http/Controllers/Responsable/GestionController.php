@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Responsable;
 
 use App\Http\Controllers\Controller;
 use App\Models\Gestion;
+use App\Models\Curso;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -13,28 +15,30 @@ use Carbon\Carbon;
 class GestionController extends Controller
 {
     /**
-     * Constructor - Solo RESPONSABLE puede gestionar gestiones
-     */
-    public function __construct()
-    {
-        $this->middleware(['auth', 'role:RESPONSABLE']);
-    }
-
-    /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): Response
+    public function index(Request $request)
     {
-        $gestiones = Gestion::query()
-            ->when($request->search, function ($query, $search) {
-                $query->where('nombre', 'ILIKE', "%{$search}%")
-                    ->orWhere('descripcion', 'ILIKE', "%{$search}%");
-            })
-            ->when($request->activo !== null, function ($query) use ($request) {
+        try {
+            $query = Gestion::query();
+
+            // Aplicar filtros de búsqueda
+            if ($request->search) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('nombre', 'LIKE', "%{$search}%")
+                      ->orWhere('descripcion', 'LIKE', "%{$search}%");
+                });
+            }
+
+            // Aplicar filtro de estado activo
+            if ($request->activo !== null) {
                 $query->where('activo', $request->boolean('activo'));
-            })
-            ->when($request->estado, function ($query, $estado) {
-                switch ($estado) {
+            }
+
+            // Aplicar filtro de estado temporal
+            if ($request->estado) {
+                switch ($request->estado) {
                     case 'actual':
                         $query->actual();
                         break;
@@ -45,41 +49,64 @@ class GestionController extends Controller
                         $query->pasada();
                         break;
                 }
-            })
-            ->withCount(['cursos', 'cursos as cursos_activos_count' => function ($query) {
-                $query->where('activo', true);
-            }])
-            ->orderBy('fecha_inicio', 'desc')
-            ->paginate(10)
-            ->withQueryString();
-
-        // Agregar estado calculado a cada gestión
-        $gestiones->getCollection()->transform(function ($gestion) {
-            $hoy = Carbon::now();
-            if ($gestion->fecha_fin < $hoy) {
-                $gestion->estado_calculado = 'Finalizada';
-                $gestion->color_estado = 'secondary';
-            } elseif ($gestion->fecha_inicio > $hoy) {
-                $gestion->estado_calculado = 'Próxima';
-                $gestion->color_estado = 'info';
-            } else {
-                $gestion->estado_calculado = 'En Curso';
-                $gestion->color_estado = 'success';
             }
-            return $gestion;
-        });
 
-        return Inertia::render('Gestiones/Index', [
-            'gestiones' => $gestiones,
-            'filters' => $request->only(['search', 'activo', 'estado']),
-            'estadisticas' => [
+            // Obtener los resultados
+            $gestiones = $query
+                ->withCount(['cursos', 'cursos as cursos_activos_count' => function ($query) {
+                    $query->where('activo', true);
+                }])
+                ->orderBy('fecha_inicio', 'desc')
+                ->paginate(10)
+                ->withQueryString();
+
+            // Agregar estado calculado a cada gestión
+            $gestiones->getCollection()->transform(function ($gestion) {
+                $hoy = Carbon::now();
+                if ($gestion->fecha_fin < $hoy) {
+                    $gestion->estado_calculado = 'Finalizada';
+                    $gestion->color_estado = 'secondary';
+                } elseif ($gestion->fecha_inicio > $hoy) {
+                    $gestion->estado_calculado = 'Próxima';
+                    $gestion->color_estado = 'info';
+                } else {
+                    $gestion->estado_calculado = 'En Curso';
+                    $gestion->color_estado = 'success';
+                }
+                return $gestion;
+            });
+
+            $estadisticas = [
                 'total' => Gestion::count(),
                 'activas' => Gestion::activo()->count(),
                 'en_curso' => Gestion::actual()->count(),
                 'futuras' => Gestion::futura()->count(),
                 'finalizadas' => Gestion::pasada()->count(),
-            ]
-        ]);
+            ];
+
+            // Para peticiones AJAX del componente, devolver JSON
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'gestiones' => $gestiones,
+                    'estadisticas' => $estadisticas,
+                    'filters' => $request->only(['search', 'activo', 'estado'])
+                ]);
+            }
+
+            return redirect()->route('responsable.dashboard');
+        } catch (\Exception $e) {
+            Log::error('Error en GestionController@index: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'error' => 'Error al cargar las gestiones',
+                    'message' => $e->getMessage()
+                ], 500);
+            }
+
+            return back()->with('error', 'Error al cargar las gestiones');
+        }
     }
 
     /**
@@ -102,13 +129,12 @@ class GestionController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => ['required', 'string', 'max:100', 'unique:GESTION,nombre'],
+            'nombre' => ['required', 'string', 'max:100'],
             'descripcion' => ['nullable', 'string', 'max:1000'],
             'fecha_inicio' => ['required', 'date', 'before:fecha_fin'],
             'fecha_fin' => ['required', 'date', 'after:fecha_inicio'],
         ], [
             'nombre.required' => 'El nombre de la gestión es obligatorio.',
-            'nombre.unique' => 'Ya existe una gestión con este nombre.',
             'fecha_inicio.required' => 'La fecha de inicio es obligatoria.',
             'fecha_inicio.before' => 'La fecha de inicio debe ser anterior a la fecha de fin.',
             'fecha_fin.required' => 'La fecha de fin es obligatoria.',
@@ -138,7 +164,7 @@ class GestionController extends Controller
             'activo' => true,
         ]);
 
-        return redirect()->route('gestiones.index')
+        return redirect()->route('responsable.dashboard')
             ->with('success', 'Gestión académica creada exitosamente.');
     }
 
@@ -200,54 +226,67 @@ class GestionController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Gestion $gestion)
+    public function update(Request $request, $id)
     {
-        $validated = $request->validate([
-            'nombre' => [
-                'required',
-                'string',
-                'max:100',
-                Rule::unique('GESTION', 'nombre')->ignore($gestion->id)
-            ],
-            'descripcion' => ['nullable', 'string', 'max:1000'],
-            'fecha_inicio' => ['required', 'date', 'before:fecha_fin'],
-            'fecha_fin' => ['required', 'date', 'after:fecha_inicio'],
-            'activo' => ['boolean'],
-        ], [
-            'nombre.unique' => 'Ya existe otra gestión con este nombre.',
-            'fecha_inicio.before' => 'La fecha de inicio debe ser anterior a la fecha de fin.',
-            'fecha_fin.after' => 'La fecha de fin debe ser posterior a la fecha de inicio.',
-        ]);
+        try {
+            // Log básico para debugging
+            Log::info('Update method called', [
+                'id_param' => $id,
+                'request_all' => $request->all()
+            ]);
 
-        // Solo validar solapamiento si las fechas cambiaron
-        if (
-            $validated['fecha_inicio'] != $gestion->fecha_inicio ||
-            $validated['fecha_fin'] != $gestion->fecha_fin
-        ) {
+            // Buscar la gestión manualmente
+            $gestion = Gestion::find($id);
 
-            $solapamiento = Gestion::activo()
-                ->where('id', '!=', $gestion->id)
-                ->where(function ($query) use ($validated) {
-                    $query->whereBetween('fecha_inicio', [$validated['fecha_inicio'], $validated['fecha_fin']])
-                        ->orWhereBetween('fecha_fin', [$validated['fecha_inicio'], $validated['fecha_fin']])
-                        ->orWhere(function ($subQuery) use ($validated) {
-                            $subQuery->where('fecha_inicio', '<=', $validated['fecha_inicio'])
-                                ->where('fecha_fin', '>=', $validated['fecha_fin']);
-                        });
-                })
-                ->exists();
-
-            if ($solapamiento) {
-                return back()->withErrors([
-                    'fecha_inicio' => 'Las fechas se solapan con otra gestión activa.',
-                ])->withInput();
+            if (!$gestion) {
+                Log::error('Gestión no encontrada', ['id' => $id]);
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Gestión no encontrada'
+                ], 404);
             }
+
+            Log::info('Gestión encontrada', ['gestion' => $gestion->toArray()]);
+
+            // Validación mínima
+            $validated = $request->validate([
+                'nombre' => 'required|string|max:100',
+                'descripcion' => 'nullable|string',
+                'fecha_inicio' => 'required|date',
+                'fecha_fin' => 'required|date'
+            ]);
+
+            // Log antes de update
+            Log::info('Before update', ['validated' => $validated]);
+
+            $gestion->update($validated);
+
+            // Log después de update
+            Log::info('After update', ['gestion' => $gestion->fresh()->toArray()]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Gestión actualizada exitosamente.',
+                'gestion' => $gestion->fresh()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Update error', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'debug' => [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            ], 500);
         }
-
-        $gestion->update($validated);
-
-        return redirect()->route('gestiones.index')
-            ->with('success', 'Gestión académica actualizada exitosamente.');
     }
 
     /**
@@ -267,7 +306,8 @@ class GestionController extends Controller
 
         $gestion->update(['activo' => false]);
 
-        return back()->with('success', 'Gestión académica desactivada exitosamente.');
+        return redirect()->route('responsable.dashboard')
+            ->with('success', 'Gestión académica desactivada exitosamente.');
     }
 
     /**
@@ -277,7 +317,8 @@ class GestionController extends Controller
     {
         $gestion->update(['activo' => true]);
 
-        return back()->with('success', 'Gestión académica reactivada exitosamente.');
+        return redirect()->route('responsable.dashboard')
+            ->with('success', 'Gestión académica reactivada exitosamente.');
     }
 
     /**
@@ -350,5 +391,26 @@ class GestionController extends Controller
         ];
 
         return response()->json($stats);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Gestion $gestion)
+    {
+        // Verificar si tiene cursos asociados
+        $cursosCount = $gestion->cursos()->count();
+
+        if ($cursosCount > 0) {
+            return response()->json([
+                'error' => "No se puede eliminar la gestión porque tiene {$cursosCount} curso(s) asociado(s)."
+            ], 422);
+        }
+
+        $gestion->delete();
+
+        return response()->json([
+            'success' => 'Gestión académica eliminada exitosamente.'
+        ]);
     }
 }

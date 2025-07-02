@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,7 +20,7 @@ class AuthenticatedSessionController extends Controller
     public function create(): Response
     {
         return Inertia::render('Auth/Login', [
-            'canResetPassword' => Route::has('password.request'),
+            'canResetPassword' => false, // No mostramos opción de reset de password
             'status' => session('status'),
         ]);
     }
@@ -34,18 +34,21 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // Redirigir según el rol del usuario
+        // Cargar la configuración del usuario autenticado para aplicar su tema
         $user = Auth::user();
-
-        if ($user->isResponsable()) {
-            return redirect()->intended(route('dashboard.responsable'));
-        } elseif ($user->isAdministrativo()) {
-            return redirect()->intended(route('dashboard.administrativo'));
-        } elseif ($user->isTutor()) {
-            return redirect()->intended(route('dashboard.tutor'));
+        if ($user && $user->configuracion) {
+            // Guardar la configuración del tema en la sesión
+            session([
+                'user_theme_config' => [
+                    'tema_id' => $user->configuracion->tema_id,
+                    'tamano_fuente' => $user->configuracion->tamano_fuente,
+                    'alto_contraste' => $user->configuracion->alto_contraste,
+                    'modo_automatico' => $user->configuracion->modo_automatico,
+                ]
+            ]);
         }
 
-        // Fallback al dashboard general
+        // Redirigir al dashboard general que maneja la redirección según el rol
         return redirect()->intended(route('dashboard'));
     }
 

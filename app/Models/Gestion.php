@@ -16,6 +16,21 @@ class Gestion extends Model
     protected $table = 'GESTION';
 
     /**
+     * Primary key de la tabla
+     */
+    protected $primaryKey = 'id';
+
+    /**
+     * Tipo de la primary key
+     */
+    protected $keyType = 'int';
+
+    /**
+     * Indica si la primary key es auto-incremental
+     */
+    public $incrementing = true;
+
+    /**
      * Campos que se pueden asignar masivamente
      */
     protected $fillable = [

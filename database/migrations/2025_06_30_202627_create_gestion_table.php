@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('GESTION', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre', 100)->unique();
+            $table->string('nombre', 100); // Eliminada restricción unique()
             $table->text('descripcion')->nullable();
             $table->date('fecha_inicio');
             $table->date('fecha_fin');

@@ -19,6 +19,9 @@ class RoleMiddleware
     {
         // Verificar que el usuario esté autenticado
         if (!Auth::check()) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
             return redirect()->route('login');
         }
 
@@ -27,11 +30,17 @@ class RoleMiddleware
         // Verificar que el usuario esté activo
         if (!$user->activo) {
             Auth::logout();
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['message' => 'Su cuenta ha sido desactivada.'], 403);
+            }
             return redirect()->route('login')->with('error', 'Su cuenta ha sido desactivada. Contacte al administrador.');
         }
 
         // Verificar que el usuario tenga uno de los roles permitidos
         if (!in_array($user->rol, $roles)) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['message' => 'No tienes permisos para acceder a esta sección.'], 403);
+            }
             // Redirigir según el rol actual del usuario
             return $this->redirectToUserDashboard($user->rol);
         }

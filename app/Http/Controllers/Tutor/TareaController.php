@@ -17,14 +17,6 @@ use Carbon\Carbon;
 class TareaController extends Controller
 {
     /**
-     * Constructor - Solo TUTOR puede gestionar tareas
-     */
-    public function __construct()
-    {
-        $this->middleware(['auth', 'role:TUTOR']);
-    }
-
-    /**
      * Display a listing of the resource.
      */
     public function index(Request $request): Response
@@ -240,7 +232,7 @@ class TareaController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Tarea $tarea): Response
+    public function edit(Tarea $tarea) // Eliminado el tipo de retorno estricto
     {
         // Verificar permisos
         if ($tarea->curso->tutor_id !== Auth::id()) {

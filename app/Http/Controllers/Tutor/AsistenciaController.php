@@ -16,14 +16,6 @@ use Carbon\Carbon;
 class AsistenciaController extends Controller
 {
     /**
-     * Constructor - Solo TUTOR puede gestionar asistencias
-     */
-    public function __construct()
-    {
-        $this->middleware(['auth', 'role:TUTOR']);
-    }
-
-    /**
      * Display a listing of the resource - Vista de cursos para control de asistencia
      */
     public function index(Request $request): Response

@@ -38,8 +38,8 @@ class Curso extends Model
      * Campos que deben ser casteados a tipos nativos
      */
     protected $casts = [
-        'fecha_inicio' => 'date',
-        'fecha_fin' => 'date',
+        'fecha_inicio' => 'date:Y-m-d',
+        'fecha_fin' => 'date:Y-m-d',
         'activo' => 'boolean',
         'duracion_horas' => 'integer',
         'cupos_totales' => 'integer',

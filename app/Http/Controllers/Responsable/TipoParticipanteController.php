@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Responsable;
 use App\Http\Controllers\Controller;
 use App\Models\TipoParticipante;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,38 +18,66 @@ class TipoParticipanteController extends Controller
      */
     public function __construct()
     {
-        $this->middleware(['auth', 'role:RESPONSABLE']);
+        // Middleware applied via route groups instead
     }
 
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): Response
+    public function index(Request $request)
     {
-        $tiposParticipante = TipoParticipante::query()
-            ->when($request->search, function ($query, $search) {
-                $query->where('codigo', 'ILIKE', "%{$search}%")
-                    ->orWhere('descripcion', 'ILIKE', "%{$search}%");
-            })
-            ->when($request->activo !== null, function ($query) use ($request) {
-                $query->where('activo', $request->boolean('activo'));
-            })
-            ->withCount(['participantes', 'participantes as participantes_activos_count' => function ($query) {
-                $query->where('activo', true);
-            }])
-            ->orderBy('codigo')
-            ->paginate(10)
-            ->withQueryString();
+        try {
+            $query = TipoParticipante::query();
 
-        return Inertia::render('Responsable/TiposParticipante/Index', [
-            'tiposParticipante' => $tiposParticipante,
-            'filters' => $request->only(['search', 'activo']),
-            'estadisticas' => [
+            // Aplicar filtros de búsqueda
+            if ($request->search) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('codigo', 'LIKE', "%{$search}%")
+                      ->orWhere('descripcion', 'LIKE', "%{$search}%");
+                });
+            }
+
+            // Aplicar filtro de estado
+            if ($request->activo !== null) {
+                $query->where('activo', $request->boolean('activo'));
+            }
+
+            // Obtener los resultados sin conteos por ahora
+            $tiposParticipante = $query
+                ->orderBy('codigo')
+                ->paginate(10)
+                ->withQueryString();
+
+            $estadisticas = [
                 'total' => TipoParticipante::count(),
-                'activos' => TipoParticipante::activo()->count(),
-                'con_participantes' => TipoParticipante::has('participantes')->count(),
-            ]
-        ]);
+                'activos' => TipoParticipante::where('activo', true)->count(),
+                'conParticipantes' => 0,
+            ];
+
+            // Para peticiones AJAX del componente, devolver JSON
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'tiposParticipante' => $tiposParticipante,
+                    'estadisticas' => $estadisticas,
+                    'filters' => $request->only(['search', 'activo'])
+                ]);
+            }
+
+            return redirect()->route('responsable.dashboard');
+        } catch (\Exception $e) {
+            Log::error('Error en TipoParticipanteController@index: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'error' => 'Error al cargar los tipos de participante',
+                    'message' => $e->getMessage()
+                ], 500);
+            }
+
+            return back()->with('error', 'Error al cargar los tipos de participante');
+        }
     }
 
     /**
@@ -77,12 +107,12 @@ class TipoParticipanteController extends Controller
         // Normalizar código a mayúsculas
         $validated['codigo'] = strtoupper($validated['codigo']);
 
-        TipoParticipante::create([
+        $tipoParticipante = TipoParticipante::create([
             ...$validated,
             'activo' => true,
         ]);
 
-        return redirect()->route('responsable.tipos-participante.index')
+        return redirect()->route('responsable.dashboard')
             ->with('success', 'Tipo de participante creado exitosamente.');
     }
 
@@ -129,55 +159,40 @@ class TipoParticipanteController extends Controller
      */
     public function update(Request $request, TipoParticipante $tipoParticipante)
     {
+        // Solo validar y actualizar los campos que pueden cambiar
         $validated = $request->validate([
-            'codigo' => [
-                'required',
-                'string',
-                'max:10',
-                Rule::unique('TIPO_PARTICIPANTE', 'codigo')->ignore($tipoParticipante->id)
-            ],
             'descripcion' => ['required', 'string', 'max:255'],
             'activo' => ['boolean'],
         ], [
-            'codigo.required' => 'El código es obligatorio.',
-            'codigo.unique' => 'Ya existe otro tipo de participante con este código.',
-            'codigo.max' => 'El código no puede tener más de 10 caracteres.',
             'descripcion.required' => 'La descripción es obligatoria.',
             'descripcion.max' => 'La descripción no puede tener más de 255 caracteres.',
         ]);
 
-        // Normalizar código a mayúsculas
-        $validated['codigo'] = strtoupper($validated['codigo']);
-
         $tipoParticipante->update($validated);
 
-        return redirect()->route('responsable.tipos-participante.index')
+        return redirect()->route('responsable.dashboard')
             ->with('success', 'Tipo de participante actualizado exitosamente.');
     }
 
     /**
      * Desactivar tipo de participante (soft delete)
      */
-    public function desactivar(TipoParticipante $tipoParticipante)
+    public function desactivar(Request $request, TipoParticipante $tipoParticipante)
     {
         // Verificar si tiene participantes activos
         $participantesActivos = $tipoParticipante->participantes()->activo()->count();
 
         if ($participantesActivos > 0) {
-            return back()->with(
-                'error',
-                "No se puede desactivar el tipo de participante porque tiene {$participantesActivos} participante(s) activo(s)."
-            );
+            $errorMessage = "No se puede desactivar el tipo de participante porque tiene {$participantesActivos} participante(s) activo(s).";
+            return back()->with('error', $errorMessage);
         }
 
         // Verificar si tiene precios de cursos activos
         $preciosActivos = $tipoParticipante->preciosCursos()->where('activo', true)->count();
 
         if ($preciosActivos > 0) {
-            return back()->with(
-                'error',
-                "No se puede desactivar el tipo de participante porque tiene precios activos en {$preciosActivos} curso(s)."
-            );
+            $errorMessage = "No se puede desactivar el tipo de participante porque tiene precios activos en {$preciosActivos} curso(s).";
+            return back()->with('error', $errorMessage);
         }
 
         $tipoParticipante->update(['activo' => false]);
@@ -188,7 +203,7 @@ class TipoParticipanteController extends Controller
     /**
      * Reactivar tipo de participante
      */
-    public function reactivar(TipoParticipante $tipoParticipante)
+    public function reactivar(Request $request, TipoParticipante $tipoParticipante)
     {
         $tipoParticipante->update(['activo' => true]);
 
@@ -198,12 +213,12 @@ class TipoParticipanteController extends Controller
     /**
      * Cambiar estado activo/inactivo
      */
-    public function toggleActivo(TipoParticipante $tipoParticipante)
+    public function toggleActivo(Request $request, TipoParticipante $tipoParticipante)
     {
         if ($tipoParticipante->activo) {
-            return $this->desactivar($tipoParticipante);
+            return $this->desactivar($request, $tipoParticipante);
         } else {
-            return $this->reactivar($tipoParticipante);
+            return $this->reactivar($request, $tipoParticipante);
         }
     }
 
@@ -249,5 +264,21 @@ class TipoParticipanteController extends Controller
         ];
 
         return response()->json($stats);
+    }
+
+    /**
+     * Eliminar tipo de participante
+     */
+    public function destroy(TipoParticipante $tipoParticipante)
+    {
+        // No permitir eliminar si tiene participantes asociados
+        if ($tipoParticipante->participantes()->count() > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se puede eliminar: hay participantes asociados a este tipo.'
+            ], 400);
+        }
+        $tipoParticipante->delete();
+        return response()->json(['success' => true, 'message' => 'Tipo de participante eliminado exitosamente.']);
     }
 }

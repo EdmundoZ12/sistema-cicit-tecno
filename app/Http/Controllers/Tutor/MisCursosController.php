@@ -17,14 +17,6 @@ use Carbon\Carbon;
 class MisCursosController extends Controller
 {
     /**
-     * Constructor - Solo TUTOR puede acceder
-     */
-    public function __construct()
-    {
-        $this->middleware(['auth', 'role:TUTOR']);
-    }
-
-    /**
      * Display a listing of the resource - Cursos del tutor autenticado
      */
     public function index(Request $request): Response

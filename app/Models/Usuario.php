@@ -18,6 +18,16 @@ class Usuario extends Authenticatable
     protected $table = 'USUARIO';
 
     /**
+     * La clave primaria de la tabla
+     */
+    protected $primaryKey = 'id';
+
+    /**
+     * Indica si el ID es auto-incrementable
+     */
+    public $incrementing = true;
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -56,14 +66,6 @@ class Usuario extends Authenticatable
             'password' => 'hashed',
             'activo' => 'boolean',
         ];
-    }
-
-    /**
-     * Campo para autenticación personalizada (registro en lugar de email)
-     */
-    public function getAuthIdentifierName()
-    {
-        return 'registro'; // Login con el campo 'registro' en lugar de 'email'
     }
 
     /**
