@@ -35,12 +35,14 @@ class DashboardController extends Controller
 
         switch ($user->rol) {
             case 'RESPONSABLE':
-                return $this->dashboardResponsable();
+                // Redirigir directamente al dashboard del responsable
+                return redirect('/responsable/dashboard');
             case 'ADMINISTRATIVO':
                 // Redirigir directamente al dashboard administrativo
                 return redirect('/admin');
             case 'TUTOR':
-                return $this->dashboardTutor();
+                // Redirigir directamente al dashboard de tutor
+                return redirect('/tutor');
             default:
                 abort(403, 'Rol no válido para acceder al dashboard');
         }

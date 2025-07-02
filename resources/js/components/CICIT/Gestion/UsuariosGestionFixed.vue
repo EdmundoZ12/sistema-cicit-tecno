@@ -405,20 +405,25 @@
                       <p v-if="errors.rol" class="mt-1 text-sm text-red-600">{{ errors.rol }}</p>
                     </div>
 
-                    <!-- Nota sobre contraseña automática (solo para crear) -->
-                    <div v-if="!isEditing" class="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-md p-3">
-                      <div class="flex">
-                        <div class="flex-shrink-0">
-                          <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                          </svg>
-                        </div>
-                        <div class="ml-3">
-                          <p class="text-sm text-blue-700 dark:text-blue-300">
-                            <strong>Nota:</strong> La contraseña se generará automáticamente cuando se cree el usuario. Se mostrará después de crearlo.
-                          </p>
-                        </div>
-                      </div>
+                    <!-- Campo de contraseña (solo para crear usuario) -->
+                    <div v-if="!isEditing">
+                      <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Contraseña *
+                      </label>
+                      <input
+                        v-model="form.password"
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        minlength="8"
+                        placeholder="Ingrese la contraseña para el usuario"
+                        class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white transition-all duration-200"
+                      />
+                      <p v-if="errors.password" class="mt-1 text-sm text-red-600">{{ errors.password }}</p>
+                      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        La contraseña debe tener al menos 8 caracteres
+                      </p>
                     </div>
 
                     <!-- Estado (solo para editar) -->
@@ -561,6 +566,7 @@ interface UserForm {
   telefono: string;
   rol: string;
   activo: boolean;
+  password: string;
 }
 
 const props = defineProps<{
@@ -611,7 +617,8 @@ const form = ref<UserForm>({
   email: '',
   telefono: '',
   rol: '',
-  activo: true
+  activo: true,
+  password: ''
 });
 
 // Errores de validación
@@ -737,7 +744,8 @@ const resetForm = () => {
     email: '',
     telefono: '',
     rol: '',
-    activo: true
+    activo: true,
+    password: ''
   };
   errors.value = {};
 };
@@ -758,7 +766,8 @@ const openEditModal = (usuario: Usuario) => {
     email: usuario.email,
     telefono: usuario.telefono || '',
     rol: usuario.rol,
-    activo: usuario.activo
+    activo: usuario.activo,
+    password: '' // No se edita la contraseña en modo edición
   };
   errors.value = {};
   isEditing.value = true;

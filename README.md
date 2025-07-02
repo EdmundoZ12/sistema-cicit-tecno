@@ -1,12 +1,33 @@
-# Laravel + Vue Starter Kit
+# Sistema CICIT
 
-## Introduction
+## Introducción
 
-Our Vue starter kit provides a robust, modern starting point for building Laravel applications with a Vue frontend using [Inertia](https://inertiajs.com).
+Sistema de Gestión del Centro de Investigación en Ciencias de la Información y las Telecomunicaciones (CICIT). 
 
-Inertia allows you to build modern, single-page Vue applications using classic server-side routing and controllers. This lets you enjoy the frontend power of Vue combined with the incredible backend productivity of Laravel and lightning-fast Vite compilation.
+Una aplicación web moderna desarrollada con Laravel y Vue.js que permite la gestión integral de cursos, inscripciones, preinscripciones y usuarios del centro de investigación.
 
-This Vue starter kit utilizes Vue 3 and the Composition API, TypeScript, Tailwind, and the [shadcn-vue](https://www.shadcn-vue.com) component library.
+## Características
+
+- **Frontend**: Vue 3 + TypeScript con Composition API
+- **Backend**: Laravel con Inertia.js
+- **Estilos**: Tailwind CSS con componentes shadcn-vue
+- **Base de Datos**: Soporte para MySQL/PostgreSQL/SQLite
+- **Funcionalidades**:
+  - Gestión de usuarios con roles (Responsable, Administrativo, Tutor, Participante)
+  - Sistema de cursos y precios diferenciados
+  - Preinscripciones e inscripciones
+  - Dashboard personalizado por rol
+  - Estadísticas y reportes
+  - Sistema de búsqueda y logs de actividad
+
+## Tecnologías
+
+- Laravel 12
+- Vue 3 + TypeScript
+- Inertia.js
+- Tailwind CSS
+- shadcn-vue components
+- Vite
 
 ## Official Documentation
 

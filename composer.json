@@ -1,11 +1,15 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/vue-starter-kit",
+    "name": "cicit/sistema-cicit",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Sistema de Gestión CICIT - Centro de Investigación en Ciencias de la Información y las Telecomunicaciones",
     "keywords": [
         "laravel",
-        "framework"
+        "vue",
+        "cicit",
+        "sistema-gestion",
+        "cursos",
+        "inscripciones"
     ],
     "license": "MIT",
     "require": {

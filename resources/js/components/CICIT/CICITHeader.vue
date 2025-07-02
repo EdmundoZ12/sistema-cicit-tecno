@@ -83,7 +83,10 @@
 
           <!-- Menú de usuario -->
           <div class="relative ml-3">
-            <div class="flex max-w-xs items-center rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+            <button
+              @click="toggleUserMenu"
+              class="flex max-w-xs items-center rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 hover:bg-gray-50 p-2 transition-colors"
+            >
               <span class="sr-only">Usuario</span>
               <div class="flex items-center space-x-3">
                 <div class="flex-shrink-0">
@@ -99,6 +102,35 @@
                 </div>
                 <ChevronDownIcon class="h-4 w-4 text-gray-400" />
               </div>
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div
+              v-show="showUserMenu"
+              @click="showUserMenu = false"
+              class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700"
+            >
+              <Link
+                href="/perfil"
+                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                Mi Perfil
+              </Link>
+              <Link
+                href="/configuracion"
+                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                Configuración
+              </Link>
+              <hr class="border-gray-200 dark:border-gray-700">
+              <Link
+                :href="route('logout')"
+                method="post"
+                as="button"
+                class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                Cerrar Sesión
+              </Link>
             </div>
           </div>
         </div>
@@ -146,6 +178,7 @@ const searchTerm = ref('')
 const searchResults = ref<SearchResult[]>([])
 const unreadNotifications = ref(0)
 const showNotifications = ref(false)
+const showUserMenu = ref(false)
 
 // Búsqueda en tiempo real
 let searchTimeout: number
@@ -192,6 +225,10 @@ const selectSearchResult = (result: SearchResult) => {
 
 const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value
+}
+
+const toggleUserMenu = () => {
+  showUserMenu.value = !showUserMenu.value
 }
 
 const getUserInitials = (nombre?: string, apellido?: string) => {

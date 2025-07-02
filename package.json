@@ -1,4 +1,5 @@
 {
+    "name": "sistema-cicit",
     "private": true,
     "type": "module",
     "scripts": {

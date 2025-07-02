@@ -22,10 +22,23 @@ class DatabaseSeeder extends Seeder
             // 2. Luego los usuarios (dependen de TipoParticipante)
             UsuarioSeeder::class,
 
-            // 3. Después el menú
+            // 3. Después cursos (dependen de usuarios y gestión)
+            CursoSeeder::class,
+            PrecioCursoSeeder::class,
+
+            // 4. Participantes (dependen de TipoParticipante)
+            ParticipanteSeeder::class,
+
+            // 5. Preinscripciones e inscripciones (dependen de cursos y participantes)
+            PreinscripcionSeeder::class,
+            InscripcionSeeder::class,
+
+            // 6. El menú
             MenuItemSeeder::class,
 
-            // 4. Finalmente las estadísticas
+            // 7. Estadísticas y logs (dependen de usuarios y estructura general)
+            VisitaPaginaSeeder::class,
+            BusquedaLogSeeder::class,
             EstadisticaSeeder::class,
         ]);
     }

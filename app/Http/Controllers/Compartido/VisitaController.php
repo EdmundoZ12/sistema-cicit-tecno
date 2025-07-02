@@ -66,13 +66,19 @@ class VisitaController extends Controller
                 ->distinct('ip_address')->count(),
         ];
 
-        return response()->json($stats);
+        // Si es una petición AJAX o desde la API, devolver JSON
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json($stats);
+        }
+
+        // Si es una petición web normal, redirigir al dashboard
+        return redirect()->route('dashboard')->with('visitStats', $stats);
     }
 
     /**
      * Obtener estadísticas generales del sitio
      */
-    public function estadisticasGenerales()
+    public function estadisticasGenerales(Request $request)
     {
         $stats = [
             'total_visitas_sitio' => VisitaPagina::count(),
@@ -83,7 +89,13 @@ class VisitaController extends Controller
             'paginas_mas_visitadas' => $this->getPaginasMasVisitadas(),
         ];
 
-        return response()->json($stats);
+        // Si es una petición AJAX o desde la API, devolver JSON
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json($stats);
+        }
+
+        // Si es una petición web normal, redirigir al dashboard
+        return redirect()->route('dashboard')->with('generalStats', $stats);
     }
 
     /**
@@ -120,13 +132,19 @@ class VisitaController extends Controller
                 ];
             });
 
-        return response()->json($paginas);
+        // Si es una petición AJAX o desde la API, devolver JSON
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json($paginas);
+        }
+
+        // Si es una petición web normal, redirigir al dashboard
+        return redirect()->route('dashboard')->with('paginasVisitadas', $paginas->toArray());
     }
 
     /**
      * Obtener visitantes en tiempo real (últimos 30 minutos)
      */
-    public function visitantesEnLinea()
+    public function visitantesEnLinea(Request $request)
     {
         $visitantesActivos = VisitaPagina::where('created_at', '>=', Carbon::now()->subMinutes(30))
             ->distinct('session_id')
@@ -146,10 +164,18 @@ class VisitaController extends Controller
                 ];
             });
 
-        return response()->json([
+        $data = [
             'visitantes_activos' => $visitantesActivos,
             'ultimas_visitas' => $ultimasVisitas,
-        ]);
+        ];
+
+        // Si es una petición AJAX o desde la API, devolver JSON
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json($data);
+        }
+
+        // Si es una petición web normal, redirigir al dashboard
+        return redirect()->route('dashboard')->with('visitantesEnLinea', $data);
     }
 
     /**
@@ -168,7 +194,13 @@ class VisitaController extends Controller
             'fecha_actualizacion' => Carbon::now()->format('d/m/Y H:i'),
         ];
 
-        return response()->json($datos);
+        // Si es una petición AJAX o desde la API, devolver JSON
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json($datos);
+        }
+
+        // Si es una petición web normal, redirigir al dashboard
+        return redirect()->route('dashboard')->with('datosPiePagina', $datos);
     }
 
     /**

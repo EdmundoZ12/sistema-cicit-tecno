@@ -62,20 +62,22 @@ const handleSearch = async (searchTerm: string) => {
     }
 };
 
-// Obtener contador de visitas para la página actual
-const fetchVisitCount = async () => {
-    try {
-        const response = await fetch(`/api/visitas/contador${page.url}`);
-        const data = await response.json();
-        visitCount.value = data.count;
-    } catch (error) {
-        console.error('Error cargando contador:', error);
-        visitCount.value = siteStats.value.total_visits || 0;
-    }
-};
+// TEMPORAL: Contador de visitas deshabilitado para evitar conflictos
+// const fetchVisitCount = async () => {
+//     try {
+//         const url = `/api/visitas/contador?pagina=${encodeURIComponent(page.url)}`;
+//         const response = await fetch(url);
+//         const data = await response.json();
+//         visitCount.value = data.total_visitas || 0;
+//     } catch (error) {
+//         console.error('Error cargando contador:', error);
+//         visitCount.value = siteStats.value.total_visits || 0;
+//     }
+// };
 
 onMounted(() => {
-    fetchVisitCount();
+    // fetchVisitCount(); // Comentado temporalmente
+    visitCount.value = 0; // Valor por defecto
 
     // Registrar visita de la página
     fetch('/api/visitas/registrar', {

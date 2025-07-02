@@ -262,13 +262,16 @@
               </select>
             </div>
 
+            <!-- Campo de contraseña solo para usuarios nuevos -->
             <div v-if="!editingUser" class="md:col-span-2">
               <label class="label required">Contraseña</label>
               <input
                 v-model="form.password"
                 type="password"
                 class="input"
-                :required="!editingUser"
+                placeholder="Ingrese la contraseña para el usuario"
+                required
+                minlength="8"
               />
               <div v-if="errors.password" class="text-sm text-destructive mt-1">
                 {{ errors.password }}

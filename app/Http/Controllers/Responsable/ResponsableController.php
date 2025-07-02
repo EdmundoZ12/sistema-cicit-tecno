@@ -52,6 +52,9 @@ class ResponsableController extends Controller
             // Distribución por tipo de participante
             'participantes_por_tipo' => $this->getParticipantesPorTipo(),
 
+            // Actividad reciente
+            'actividad_reciente' => $this->getActividadReciente(),
+
             // Estadísticas de acceso
             'visitas_hoy' => VisitaPagina::whereDate('created_at', Carbon::today())->count(),
             'visitas_mes' => VisitaPagina::whereMonth('created_at', Carbon::now()->month)->count(),
@@ -444,5 +447,64 @@ class ResponsableController extends Controller
 
         return redirect()->route('responsable.usuarios')
             ->with('success', 'Usuario eliminado exitosamente');
+    }
+
+    /**
+     * Obtener actividad reciente del sistema
+     */
+    private function getActividadReciente()
+    {
+        $actividades = collect();
+
+        // Inscripciones recientes
+        $inscripcionesRecientes = Inscripcion::with(['participante:id,nombre,apellido', 'curso:id,nombre'])
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($inscripcion) {
+                return [
+                    'id' => 'inscripcion_' . $inscripcion->id,
+                    'descripcion' => "Nueva inscripción de {$inscripcion->participante->nombre} {$inscripcion->participante->apellido} al curso {$inscripcion->curso->nombre}",
+                    'fecha' => $inscripcion->created_at,
+                    'tipo' => 'inscripcion'
+                ];
+            });
+
+        // Preinscripciones recientes
+        $preinscripcionesRecientes = Preinscripcion::with(['participante:id,nombre,apellido', 'curso:id,nombre'])
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($preinscripcion) {
+                return [
+                    'id' => 'preinscripcion_' . $preinscripcion->id,
+                    'descripcion' => "Nueva preinscripción de {$preinscripcion->participante->nombre} {$preinscripcion->participante->apellido} al curso {$preinscripcion->curso->nombre}",
+                    'fecha' => $preinscripcion->created_at,
+                    'tipo' => 'preinscripcion'
+                ];
+            });
+
+        // Usuarios recientes
+        $usuariosRecientes = Usuario::latest()
+            ->take(3)
+            ->get()
+            ->map(function ($usuario) {
+                return [
+                    'id' => 'usuario_' . $usuario->id,
+                    'descripcion' => "Nuevo usuario registrado: {$usuario->nombre} {$usuario->apellido} ({$usuario->rol})",
+                    'fecha' => $usuario->created_at,
+                    'tipo' => 'usuario'
+                ];
+            });
+
+        // Combinar todas las actividades
+        $actividades = $actividades->merge($inscripcionesRecientes)
+            ->merge($preinscripcionesRecientes)
+            ->merge($usuariosRecientes)
+            ->sortByDesc('fecha')
+            ->take(10)
+            ->values();
+
+        return $actividades;
     }
 }

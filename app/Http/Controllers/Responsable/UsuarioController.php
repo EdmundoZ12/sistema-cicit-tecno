@@ -14,14 +14,6 @@ use Inertia\Response;
 class UsuarioController extends Controller
 {
     /**
-     * Constructor - Solo RESPONSABLE puede gestionar usuarios
-     */
-    public function __construct()
-    {
-        $this->middleware(['auth', 'role:RESPONSABLE']);
-    }
-
-    /**
      * Display a listing of the resource.
      */
     public function index(Request $request): Response
@@ -84,6 +76,7 @@ class UsuarioController extends Controller
             'telefono' => ['nullable', 'string', 'max:20'],
             'rol' => ['required', Rule::in(['RESPONSABLE', 'ADMINISTRATIVO', 'TUTOR'])],
             'registro' => ['required', 'string', 'max:20', 'unique:USUARIO,registro'],
+            'password' => ['required', 'string', 'min:8'],
         ], [
             'nombre.required' => 'El nombre es obligatorio.',
             'apellido.required' => 'El apellido es obligatorio.',
@@ -94,10 +87,9 @@ class UsuarioController extends Controller
             'rol.in' => 'El rol seleccionado no es válido.',
             'registro.required' => 'El registro es obligatorio.',
             'registro.unique' => 'Ya existe un usuario con este registro.',
+            'password.required' => 'La contraseña es obligatoria.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ]);
-
-        // Generar contraseña automática basada en datos institucionales
-        $passwordDefecto = 'CICIT' . $validated['carnet'] . '2025';
 
         $usuario = Usuario::create([
             'nombre' => $validated['nombre'],
@@ -107,15 +99,14 @@ class UsuarioController extends Controller
             'telefono' => $validated['telefono'],
             'rol' => $validated['rol'],
             'registro' => $validated['registro'],
-            'password' => Hash::make($passwordDefecto),
+            'password' => Hash::make($validated['password']),
             'activo' => true,
         ]);
 
         // Crear configuración por defecto para el usuario
         ConfiguracionUsuario::crearConfiguracionDefecto($usuario->id);
 
-        return redirect()->route('usuarios.index')
-            ->with('success', "Usuario creado exitosamente. Contraseña temporal: {$passwordDefecto}");
+        return back()->with('success', 'Usuario creado exitosamente.');
     }
 
     /**
@@ -230,23 +221,35 @@ class UsuarioController extends Controller
     }
 
     /**
-     * Resetear contraseña del usuario
+     * Cambiar estado activo/inactivo del usuario (método para la vista)
      */
-    public function resetPassword(Request $request, Usuario $usuario)
+    public function toggleStatus(Usuario $usuario)
     {
-        $validated = $request->validate([
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ], [
-            'password.required' => 'La nueva contraseña es obligatoria.',
-            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
-            'password.confirmed' => 'Las contraseñas no coinciden.',
-        ]);
+        // No permitir desactivar el último responsable
+        if ($usuario->isResponsable() && $usuario->activo && Usuario::role('RESPONSABLE')->activo()->count() <= 1) {
+            return back()->with('error', 'No se puede desactivar el último responsable del sistema.');
+        }
+
+        $usuario->update(['activo' => !$usuario->activo]);
+
+        $estado = $usuario->activo ? 'activado' : 'desactivado';
+
+        return back()->with('success', "Usuario {$estado} exitosamente.");
+    }
+
+    /**
+     * Resetear contraseña del usuario con contraseña automática
+     */
+    public function resetPassword(Usuario $usuario)
+    {
+        // Generar contraseña automática basada en datos institucionales
+        $passwordDefecto = 'CICIT' . $usuario->carnet . '2025';
 
         $usuario->update([
-            'password' => Hash::make($validated['password']),
+            'password' => Hash::make($passwordDefecto),
         ]);
 
-        return back()->with('success', 'Contraseña actualizada exitosamente.');
+        return back()->with('success', "Contraseña restablecida exitosamente. Nueva contraseña: {$passwordDefecto}");
     }
 
     /**
@@ -351,5 +354,13 @@ class UsuarioController extends Controller
         ];
 
         return response()->json($stats);
+    }
+
+    /**
+     * Test simple para verificar que el controller funciona
+     */
+    public function test()
+    {
+        return response()->json(['message' => 'UsuarioController funciona correctamente']);
     }
 }

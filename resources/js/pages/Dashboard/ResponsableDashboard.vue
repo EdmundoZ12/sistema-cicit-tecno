@@ -395,7 +395,7 @@ onMounted(() => {
           </CardHeader>
           <CardContent class="pt-2">
             <div class="space-y-2">
-              <div v-for="tipo in estadisticas.participantes_por_tipo" :key="tipo.tipo" class="flex items-center justify-between">
+              <div v-for="tipo in (estadisticas.participantes_por_tipo || [])" :key="tipo.tipo" class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <div class="h-2 w-2 rounded-full bg-blue-500"></div>
                   <span class="text-xs font-medium">{{ tipo.tipo }}</span>
@@ -422,7 +422,7 @@ onMounted(() => {
           </CardHeader>
           <CardContent class="pt-2">
             <div class="space-y-2">
-              <div v-for="actividad in estadisticas.actividad_reciente.slice(0, 6)" :key="actividad.id" class="flex items-start gap-3">
+              <div v-for="actividad in (estadisticas.actividad_reciente || []).slice(0, 6)" :key="actividad.id" class="flex items-start gap-3">
                 <div class="h-2 w-2 rounded-full bg-green-500 mt-1 flex-shrink-0"></div>
                 <div class="flex-1 min-w-0">
                   <p class="text-xs text-gray-900 truncate">{{ actividad.descripcion }}</p>

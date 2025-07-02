@@ -221,21 +221,16 @@ Route::prefix('menu')->name('menu.')->group(function () {
 
 // Contador de visitas (Requisito 7)
 Route::prefix('visitas')->name('visitas.')->group(function () {
-    // Públicas
-    Route::get('/contador/{pagina?}', [VisitaController::class, 'contadorPagina'])->name('contador');
+    // Solo pie de página público (no conflictivo)
     Route::get('/pie-pagina', [VisitaController::class, 'datosPiePagina'])->name('pie.pagina');
-    Route::get('/estadisticas-generales', [VisitaController::class, 'estadisticasGenerales'])->name('estadisticas.generales');
 
-    // Solo para usuarios autenticados
-    Route::middleware(['auth'])->group(function () {
-        Route::get('/en-linea', [VisitaController::class, 'visitantesEnLinea'])->name('en.linea');
-        Route::get('/mas-visitadas', [VisitaController::class, 'paginasMasVisitadas'])->name('mas.visitadas');
-    });
-
-    // Solo para RESPONSABLE
+    // Solo para RESPONSABLE (reportes específicos)
     Route::middleware(['auth', 'role:RESPONSABLE'])->group(function () {
         Route::get('/reportes', [VisitaController::class, 'reportes'])->name('reportes');
     });
+    
+    // NOTA: Las rutas de contador, estadísticas y en-línea están disponibles vía API
+    // para evitar conflictos con respuestas Inertia vs JSON
 });
 
 // Estadísticas de búsquedas (solo para RESPONSABLE)
@@ -271,18 +266,17 @@ Route::middleware(['auth', 'role:RESPONSABLE'])->prefix('responsable')->name('re
     Route::get('api/cursos-estadisticas', [\App\Http\Controllers\Responsable\CursoController::class, 'estadisticas'])->name('api.cursos-estadisticas');
 
     // Rutas adicionales del responsable
-    Route::get('usuarios', [\App\Http\Controllers\Responsable\ResponsableController::class, 'usuarios'])->name('usuarios');
+    Route::get('usuarios', [\App\Http\Controllers\Responsable\UsuarioController::class, 'index'])->name('usuarios');
 
     // Dashboard específico
     Route::get('/dashboard', [\App\Http\Controllers\Responsable\ResponsableController::class, 'dashboard'])->name('dashboard');
 
     // Rutas de usuarios (dentro del grupo responsable)
     Route::get('usuarios-data', [\App\Http\Controllers\Responsable\ResponsableController::class, 'getUsuariosData'])->name('usuarios.data');
-    Route::post('usuarios', [\App\Http\Controllers\Responsable\ResponsableController::class, 'storeUsuario'])->name('usuarios.store');
-    Route::put('usuarios/{usuario}', [\App\Http\Controllers\Responsable\ResponsableController::class, 'updateUsuario'])->name('usuarios.update');
-    Route::delete('usuarios/{usuario}', [\App\Http\Controllers\Responsable\ResponsableController::class, 'deleteUsuario'])->name('usuarios.delete');
-    Route::put('usuarios/{usuario}/toggle-status', [\App\Http\Controllers\Responsable\ResponsableController::class, 'toggleUserStatus'])->name('usuarios.toggle-status');
-    Route::post('usuarios/{usuario}/reset-password', [\App\Http\Controllers\Responsable\ResponsableController::class, 'resetUserPassword'])->name('usuarios.reset-password');
+    Route::post('usuarios', [\App\Http\Controllers\Responsable\UsuarioController::class, 'store'])->name('usuarios.store');
+    Route::put('usuarios/{usuario}', [\App\Http\Controllers\Responsable\UsuarioController::class, 'update'])->name('usuarios.update');
+    Route::put('usuarios/{usuario}/toggle-status', [\App\Http\Controllers\Responsable\UsuarioController::class, 'toggleStatus'])->name('usuarios.toggle-status');
+    Route::post('usuarios/{usuario}/reset-password', [\App\Http\Controllers\Responsable\UsuarioController::class, 'resetPassword'])->name('usuarios.reset-password');
 
     // NOTA: La ruta 'cursos' está comentada porque conflicta con el resource route de CursoController
     // Route::get('cursos', [\App\Http\Controllers\Responsable\ResponsableController::class, 'cursos'])->name('cursos');
@@ -293,16 +287,51 @@ Route::middleware(['auth', 'role:RESPONSABLE'])->prefix('responsable')->name('re
     Route::get('database', [\App\Http\Controllers\Responsable\ResponsableController::class, 'database'])->name('database');
 });
 
-// Rutas para Tutor (ya existentes)
+// Rutas para Tutor
 Route::middleware(['auth', 'role:TUTOR'])->prefix('tutor')->name('tutor.')->group(function () {
+    
+    // Dashboard principal del tutor
+    Route::get('/', [\App\Http\Controllers\Tutor\DashboardController::class, 'index'])->name('dashboard');
+    
+    // Gestión de cursos del tutor
+    Route::resource('mis-cursos', \App\Http\Controllers\Tutor\MisCursosController::class, [
+        'names' => [
+            'index' => 'mis-cursos.index',
+            'show' => 'mis-cursos.show',
+        ]
+    ])->only(['index', 'show']);
+    
+    // Rutas adicionales para cursos
+    Route::get('/mis-cursos/{curso}/estudiantes', [\App\Http\Controllers\Tutor\MisCursosController::class, 'getEstudiantes'])->name('mis-cursos.estudiantes');
+    Route::get('/mis-cursos/{curso}/progreso/{inscripcion}', [\App\Http\Controllers\Tutor\MisCursosController::class, 'getProgresoEstudiante'])->name('mis-cursos.progreso');
+    Route::post('/mis-cursos/{curso}/actualizar-nota-final/{inscripcion}', [\App\Http\Controllers\Tutor\MisCursosController::class, 'actualizarNotaFinal'])->name('mis-cursos.actualizar-nota');
+    Route::get('/mis-cursos/{curso}/exportar-estudiantes', [\App\Http\Controllers\Tutor\MisCursosController::class, 'exportarEstudiantes'])->name('mis-cursos.exportar');
+    Route::get('/resumen-dashboard', [\App\Http\Controllers\Tutor\MisCursosController::class, 'getResumenDashboard'])->name('mis-cursos.resumen');
+    
+    // Gestión de asistencias
+    Route::resource('asistencias', \App\Http\Controllers\Tutor\AsistenciaController::class)->only(['index', 'show', 'store']);
+    Route::post('/asistencias/marcar-individual', [\App\Http\Controllers\Tutor\AsistenciaController::class, 'marcarIndividual'])->name('asistencias.marcar-individual');
+    Route::post('/asistencias/marcar-masivo', [\App\Http\Controllers\Tutor\AsistenciaController::class, 'marcarMasivo'])->name('asistencias.marcar-masivo');
+    Route::get('/asistencias/{curso}/reporte', [\App\Http\Controllers\Tutor\AsistenciaController::class, 'reporte'])->name('asistencias.reporte');
+    Route::get('/asistencias/{curso}/exportar', [\App\Http\Controllers\Tutor\AsistenciaController::class, 'exportar'])->name('asistencias.exportar');
+    Route::get('/asistencias-dashboard', [\App\Http\Controllers\Tutor\AsistenciaController::class, 'getEstadisticasDashboard'])->name('asistencias.dashboard');
+    
+    // Gestión de tareas
+    Route::resource('tareas', \App\Http\Controllers\Tutor\TareaController::class);
+    Route::post('/tareas/{tarea}/duplicar', [\App\Http\Controllers\Tutor\TareaController::class, 'duplicar'])->name('tareas.duplicar');
+    Route::post('/tareas/{tarea}/calificar-masivo', [\App\Http\Controllers\Tutor\TareaController::class, 'calificarMasivo'])->name('tareas.calificar-masivo');
+    Route::get('/tareas/{tarea}/exportar-calificaciones', [\App\Http\Controllers\Tutor\TareaController::class, 'exportarCalificaciones'])->name('tareas.exportar-calificaciones');
+    Route::get('/tareas-dashboard', [\App\Http\Controllers\Tutor\TareaController::class, 'getEstadisticasDashboard'])->name('tareas.dashboard');
+    
+    // Gestión de notas/calificaciones
     Route::resource('notas', \App\Http\Controllers\Tutor\NotaController::class);
-
-    // Rutas adicionales para notas
     Route::post('/notas/calificar', [\App\Http\Controllers\Tutor\NotaController::class, 'calificar'])->name('notas.calificar');
     Route::post('/notas/calificar-masivo', [\App\Http\Controllers\Tutor\NotaController::class, 'calificarMasivo'])->name('notas.calificar-masivo');
     Route::post('/notas/aplicar-nota-todos', [\App\Http\Controllers\Tutor\NotaController::class, 'aplicarNotaATodos'])->name('notas.aplicar-todos');
     Route::delete('/notas/{nota}/eliminar', [\App\Http\Controllers\Tutor\NotaController::class, 'eliminarNota'])->name('notas.eliminar');
-    Route::get('/estadisticas-dashboard', [\App\Http\Controllers\Tutor\NotaController::class, 'getEstadisticasDashboard'])->name('estadisticas.dashboard');
+    Route::get('/notas/{curso}/resumen', [\App\Http\Controllers\Tutor\NotaController::class, 'resumenCurso'])->name('notas.resumen-curso');
+    Route::get('/notas/{curso}/exportar', [\App\Http\Controllers\Tutor\NotaController::class, 'exportarCalificaciones'])->name('notas.exportar');
+    Route::get('/notas-dashboard', [\App\Http\Controllers\Tutor\NotaController::class, 'getEstadisticasDashboard'])->name('notas.dashboard');
 });
 
 // =====================================================
@@ -330,7 +359,7 @@ Route::middleware(['auth'])->prefix('api')->group(function () {
 
     // Registrar visita de página
     Route::post('/visitas/registrar', [VisitaController::class, 'registrarVisita'])->name('api.visitas.registrar');
-    Route::get('/visitas/contador/{pagina?}', [VisitaController::class, 'contadorPagina'])->name('api.visitas.contador');
+    // NOTA: Ruta de contador eliminada para evitar conflictos con Inertia
 });
 
 require __DIR__ . '/auth.php';
