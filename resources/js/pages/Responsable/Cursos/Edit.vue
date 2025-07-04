@@ -14,7 +14,7 @@
               </p>
             </div>
             <Link
-              href="/dashboard"
+              :href="route('dashboard')"
               class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
               @click="goBackToCursos"
             >
@@ -302,7 +302,7 @@
             <!-- Actions -->
             <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-600">
               <Link
-                href="/dashboard"
+                :href="route('dashboard')"
                 class="inline-flex justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 @click="goBackToCursos"
               >

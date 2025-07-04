@@ -29,7 +29,7 @@
         </div>
         <div class="bg-gray-50 dark:bg-gray-700 px-5 py-3">
           <div class="text-sm">
-            <Link href="/admin/preinscripciones" class="font-medium text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100">
+            <Link :href="route('admin.preinscripciones.index')" class="font-medium text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100">
               Ver todas
             </Link>
           </div>
@@ -61,7 +61,7 @@
         </div>
         <div class="bg-gray-50 dark:bg-gray-700 px-5 py-3">
           <div class="text-sm">
-            <Link href="/admin/inscripciones" class="font-medium text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100">
+            <Link :href="route('admin.inscripciones.index')" class="font-medium text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100">
               Ver todas
             </Link>
           </div>
@@ -93,7 +93,7 @@
         </div>
         <div class="bg-gray-50 dark:bg-gray-700 px-5 py-3">
           <div class="text-sm">
-            <Link href="/admin/cursos" class="font-medium text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100">
+            <Link :href="route('admin.cursos.index')" class="font-medium text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100">
               Ver todos
             </Link>
           </div>
@@ -125,7 +125,7 @@
         </div>
         <div class="bg-gray-50 dark:bg-gray-700 px-5 py-3">
           <div class="text-sm">
-            <Link href="/admin/pagos" class="font-medium text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100">
+            <Link :href="route('admin.pagos.index')" class="font-medium text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100">
               Ver pagos
             </Link>
           </div>
@@ -185,7 +185,7 @@
           </div>
           
           <div class="mt-4">
-            <Link href="/admin/preinscripciones" 
+            <Link :href="route('admin.preinscripciones.index')" 
                   class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
               Ver todas las preinscripciones →
             </Link>
@@ -239,7 +239,7 @@
           </div>
           
           <div class="mt-4">
-            <Link href="/admin/pagos" 
+            <Link :href="route('admin.pagos.index')" 
                   class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
               Ver todos los pagos →
             </Link>
@@ -253,7 +253,7 @@
       <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Acciones Rápidas</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        <Link href="/admin/preinscripciones?estado=PENDIENTE" 
+        <Link :href="route('admin.preinscripciones.index', { estado: 'PENDIENTE' })" 
               class="relative group bg-white dark:bg-gray-800 p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg shadow transition-colors">
           <div>
             <span class="rounded-lg inline-flex p-3 bg-yellow-500 text-white">
@@ -272,7 +272,7 @@
           </div>
         </Link>
 
-        <Link href="/admin/cursos/create" 
+        <Link :href="route('responsable.cursos.create')" 
               class="relative group bg-white dark:bg-gray-800 p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg shadow transition-colors">
           <div>
             <span class="rounded-lg inline-flex p-3 bg-blue-500 text-white">
@@ -291,7 +291,7 @@
           </div>
         </Link>
 
-        <Link href="/admin/pagos/registrar" 
+        <Link :href="route('admin.pagos.create')" 
               class="relative group bg-white dark:bg-gray-800 p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg shadow transition-colors">
           <div>
             <span class="rounded-lg inline-flex p-3 bg-green-500 text-white">
@@ -310,7 +310,7 @@
           </div>
         </Link>
 
-        <Link href="/admin/reportes" 
+        <Link :href="route('admin.reportes.index')" 
               class="relative group bg-white dark:bg-gray-800 p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg shadow transition-colors">
           <div>
             <span class="rounded-lg inline-flex p-3 bg-purple-500 text-white">

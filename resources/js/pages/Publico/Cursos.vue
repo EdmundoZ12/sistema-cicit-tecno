@@ -11,7 +11,7 @@
             <p class="mt-2 text-gray-600 dark:text-gray-300">Explora nuestra oferta completa de cursos de certificación</p>
           </div>
           <Link 
-            href="/" 
+            :href="route('home')" 
             class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -112,7 +112,7 @@
         </p>
         <div class="mt-6">
           <Link
-            href="/contacto"
+            :href="route('contacto')"
             class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
           >
             Contáctanos para más información
@@ -130,13 +130,13 @@
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            href="/contacto"
+            :href="route('contacto')"
             class="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 dark:bg-gray-100 dark:hover:bg-gray-200 transition-colors"
           >
             Contáctanos
           </Link>
           <Link
-            href="/"
+            :href="route('home')"
             class="inline-flex items-center px-8 py-3 border-2 border-white text-base font-medium rounded-md text-white hover:bg-white hover:text-blue-600 transition-colors"
           >
             Volver al Inicio

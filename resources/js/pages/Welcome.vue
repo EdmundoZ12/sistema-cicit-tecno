@@ -192,7 +192,7 @@ const breadcrumbs = [
                         <!-- Botón de preinscripción -->
                         <div class="flex justify-between items-center">
                             <Link
-                                :href="`/preinscripcion/${curso.id}`"
+                                :href="route('preinscripcion.create', curso.id)"
                                 class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-medium rounded-md transition-colors"
                             >
                                 Preinscribirse
@@ -208,7 +208,7 @@ const breadcrumbs = [
             <!-- Botón para ver todos los cursos -->
             <div class="text-center mt-12">
                 <Link
-                    href="/cursos"
+                    :href="route('cursos.publicos')"
                     class="inline-flex items-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                     Ver Todos los Cursos
