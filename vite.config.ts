@@ -5,13 +5,12 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-    base: '/inf513/grupo07sa/proy2/sistema-cicit-tecno/public/',
+    base: '/inf513/grupo07sa/proy2/sistema-cicit-tecno/public/build/',
     plugins: [
         laravel({
             input: ['resources/js/app.ts'],
             ssr: 'resources/js/ssr.ts',
             refresh: true,
-            buildDirectory: 'build',
         }),
         tailwindcss(),
         vue({
