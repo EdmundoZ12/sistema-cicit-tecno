@@ -1,0 +1,1 @@
+:root{--color-primary: #374BFF;--color-secondary: #6B7280;--color-background: #FFFFFF;--color-text: #111827;--font-size-base: 16px}html{font-size:var(--font-size-base)}.high-contrast{filter:contrast(150%)}.high-contrast *{border-color:#000!important}
