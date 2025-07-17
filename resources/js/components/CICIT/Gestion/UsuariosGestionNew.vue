@@ -673,11 +673,12 @@ const stats = computed((): UsuariosStats => {
 
   return { total, activos, responsables, nuevos_mes };
 });
+const BASE_URL = 'https://mail.tecnoweb.org.bo/inf513/grupo07sa/proy2/sistema-cicit-tecno/public';
 
 // Métodos
 const loadUsers = async () => {
   try {
-    const response = await fetch('/responsable/usuarios-data');
+    const response = await fetch(`${BASE_URL}/responsable/usuarios-data`);
     if (response.ok) {
       const data = await response.json();
       usuariosData.value = data.users || [];
