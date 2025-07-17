@@ -20,7 +20,7 @@
 
           <!-- Dashboard -->
           <Link
-            href="/admin"
+            :href="route('admin.dashboard')"
             class="flex items-center px-4 py-3 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300': $page.component === 'Admin/Dashboard' }"
           >
@@ -38,7 +38,7 @@
             </div>
 
             <Link
-              href="/admin/preinscripciones"
+              :href="route('admin.preinscripciones.index')"
               class="flex items-center px-4 py-3 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300': $page.component.startsWith('Admin/Preinscripciones') }"
             >
@@ -52,7 +52,7 @@
             </Link>
 
             <Link
-              href="/admin/inscripciones"
+              :href="route('admin.inscripciones.index')"
               class="flex items-center px-4 py-3 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300': $page.component.startsWith('Admin/Inscripciones') }"
             >
@@ -63,7 +63,7 @@
             </Link>
 
             <Link
-              href="/admin/pagos"
+              :href="route('admin.pagos.index')"
               class="flex items-center px-4 py-3 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300': $page.component.startsWith('Admin/Pagos') }"
             >
@@ -81,7 +81,7 @@
             </div>
 
             <Link
-              href="/admin/cursos"
+              :href="route('admin.cursos.index')"
               class="flex items-center px-4 py-3 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300': $page.component.startsWith('Admin/Cursos') }"
             >
@@ -92,7 +92,7 @@
             </Link>
 
             <Link
-              href="/admin/participantes"
+              :href="route('admin.participantes.index')"
               class="flex items-center px-4 py-3 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300': $page.component.startsWith('Admin/Participantes') }"
             >
@@ -110,7 +110,7 @@
             </div>
 
             <Link
-              href="/admin/reportes"
+              :href="route('admin.reportes.index')"
               class="flex items-center px-4 py-3 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300': $page.component.startsWith('Admin/Reportes') }"
             >
@@ -190,13 +190,13 @@
                   class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700"
                 >
                   <Link
-                    href="/admin/perfil"
+                    :href="route('admin.dashboard')"
                     class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     Mi Perfil
                   </Link>
                   <Link
-                    href="/admin/configuracion"
+                    :href="route('configuracion.index')"
                     class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     Configuración
