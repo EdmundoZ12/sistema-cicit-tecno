@@ -679,6 +679,7 @@ const BASE_URL = 'https://mail.tecnoweb.org.bo/inf513/grupo07sa/proy2/sistema-ci
 const loadUsers = async () => {
   try {
     const response = await fetch(`${BASE_URL}/responsable/usuarios-data`);
+    console.log('Cargando usuarios desde el endpoint:', response);
     if (response.ok) {
       const data = await response.json();
       usuariosData.value = data.users || [];
